@@ -1,0 +1,353 @@
+
+<style>
+canvas{display:block;width:100%;}
+.tab-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.tab{padding:6px 14px;font-size:12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-secondary);cursor:pointer;}
+.tab.on{background:var(--color-background-primary);color:var(--color-text-primary);border-color:var(--color-border-primary);font-weight:500;}
+.exp{font-size:13px;color:var(--color-text-secondary);line-height:1.7;padding:10px 14px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-bottom:10px;}
+.exp strong{color:var(--color-text-primary);font-weight:500;}
+.exp code{font-family:var(--font-mono);font-size:11px;background:var(--color-background-tertiary);padding:1px 4px;border-radius:3px;color:var(--color-text-primary);}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.stat{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 12px;}
+.stat-l{font-size:11px;color:var(--color-text-secondary);margin-bottom:2px;}
+.stat-v{font-size:14px;font-weight:500;font-family:var(--font-mono);color:var(--color-text-primary);}
+.srow{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px;color:var(--color-text-secondary);}
+.srow label{min-width:80px;}
+.srow input{flex:1;}
+.srow span{min-width:30px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary);}
+</style>
+
+<h2 class="sr-only">Interactive explainer building up sin and cos from the unit circle to the wavy robot path</h2>
+
+<div style="padding:1rem 0 0;">
+<div class="tab-row">
+  <button class="tab on" onclick="go(0)">1. The unit circle</button>
+  <button class="tab" onclick="go(1)">2. sin and cos as heights</button>
+  <button class="tab" onclick="go(2)">3. Plotting sin over steps</button>
+  <button class="tab" onclick="go(3)">4. What frequency does</button>
+  <button class="tab" onclick="go(4)">5. In the robot code</button>
+</div>
+
+<div class="exp" id="exp"></div>
+
+<div id="statsArea" style="display:none;" class="stat-row">
+  <div class="stat"><div class="stat-l">angle (i_angle)</div><div class="stat-v" id="stAngle">—</div></div>
+  <div class="stat"><div class="stat-l">sin(i_angle)</div><div class="stat-v" id="stSin">—</div></div>
+  <div class="stat"><div class="stat-l">cos(i_angle)</div><div class="stat-v" id="stCos">—</div></div>
+</div>
+
+<div id="sliderArea" style="display:none;">
+  <div class="srow"><label>Step i</label><input type="range" id="rI" min="0" max="23" step="1" value="0"><span id="vI">0</span></div>
+  <div class="srow" id="freqRow" style="display:none;"><label>Frequency</label><input type="range" id="rFreq" min="1" max="4" step="0.5" value="1"><span id="vFreq">1.0</span></div>
+</div>
+
+<canvas id="cv" height="340"></canvas>
+</div>
+
+<script>
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+const W=640,H=340;
+cv.width=W;cv.height=H;
+const PI=Math.PI;
+let stepI=0,freqV=1,tabIdx=0;
+const N=24;
+const dk=()=>matchMedia('(prefers-color-scheme:dark)').matches;
+const C={
+  teal:  ()=>dk()?'#5DCAA5':'#1D9E75',
+  amber: ()=>dk()?'#FAC775':'#BA7517',
+  purple:()=>dk()?'#AFA9EC':'#7F77DD',
+  coral: ()=>dk()?'#F09595':'#D85A30',
+  gray:  ()=>dk()?'#888780':'#B4B2A9',
+  grayD: ()=>dk()?'#D3D1C7':'#444441',
+  text:  ()=>dk()?'#D3D1C7':'#444441',
+  sec:   ()=>dk()?'#888780':'#888780',
+  faint: ()=>dk()?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.08)',
+  faint2:()=>dk()?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.04)',
+};
+function cl(){ctx.clearRect(0,0,W,H);}
+function ln(x1,y1,x2,y2,c,w,d){ctx.save();ctx.strokeStyle=c;ctx.lineWidth=w||1.5;ctx.setLineDash(d||[]);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore();}
+function dot(x,y,r,c,stroke,sw){ctx.beginPath();ctx.arc(x,y,r,0,2*PI);ctx.fillStyle=c;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=sw||1.5;ctx.stroke();}}
+function txt(s,x,y,c,sz,al){ctx.font=`${sz||11}px monospace`;ctx.fillStyle=c;ctx.textAlign=al||'left';ctx.fillText(s,x,y);ctx.textAlign='left';}
+function arc(cx,cy,r,a1,a2,c,w){ctx.beginPath();ctx.arc(cx,cy,r,a1,a2);ctx.strokeStyle=c;ctx.lineWidth=w||1.5;ctx.setLineDash([]);ctx.stroke();}
+
+function drawCircle(cx,cy,R){
+  arc(cx,cy,R,0,2*PI,C.faint(),1);
+  ln(cx-R-10,cy,cx+R+10,cy,C.faint(),1);
+  ln(cx,cy-R-10,cx,cy+R+10,C.faint(),1);
+  txt('0°',cx+R+4,cy+4,C.sec(),10);
+  txt('90°',cx-14,cy-R-4,C.sec(),10);
+  txt('180°',cx-R-30,cy+4,C.sec(),10);
+  txt('270°',cx-16,cy+R+12,C.sec(),10);
+}
+
+function tab0(){
+  cl();
+  const cx=W/2,cy=H/2,R=110;
+  drawCircle(cx,cy,R);
+  const angle=stepI*(2*PI/N);
+  const px=cx+R*Math.cos(angle);
+  const py=cy-R*Math.sin(angle);
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.strokeStyle=C.purple();ctx.lineWidth=2;ctx.setLineDash([]);ctx.stroke();
+  dot(px,py,7,C.purple());
+  ctx.beginPath();ctx.arc(cx,cy,30,0,-angle,angle>0);ctx.strokeStyle=C.amber();ctx.lineWidth=2;ctx.setLineDash([]);ctx.stroke();
+  const midA=-angle/2;
+  txt(`${(angle*180/PI).toFixed(0)}°`,cx+36*Math.cos(midA)-8,cy+36*Math.sin(midA)+4,C.amber(),10);
+  txt(`point on circle`,px+10,py-8,C.purple(),10);
+  txt(`angle = i × (2π/N)`,cx-50,cy+R+28,C.sec(),11,'center');
+  txt(`= ${stepI} × (2π/${N}) = ${angle.toFixed(3)} rad`,cx-50,cy+R+42,C.amber(),11,'center');
+  document.getElementById('stAngle').textContent=(angle*180/PI).toFixed(1)+'°';
+  document.getElementById('stSin').textContent=Math.sin(angle).toFixed(3);
+  document.getElementById('stCos').textContent=Math.cos(angle).toFixed(3);
+}
+
+function tab1(){
+  cl();
+  const cx=160,cy=H/2,R=100;
+  drawCircle(cx,cy,R);
+  const angle=stepI*(2*PI/N);
+  const px=cx+R*Math.cos(angle);
+  const py=cy-R*Math.sin(angle);
+  ln(cx,cy,px,py,C.gray(),1.5);
+  dot(px,py,6,C.purple());
+  ln(px,py,px,cy,C.teal(),2.5);
+  ln(cx,py,px,py,C.amber(),2.5,[]);
+  dot(cx,py,5,C.teal());
+  dot(px,cy,5,C.amber());
+  const sinV=Math.sin(angle),cosV=Math.cos(angle);
+  txt(`sin = ${sinV.toFixed(2)}`,px+8,py+(py<cy?-8:14),C.teal(),11);
+  txt(`cos = ${cosV.toFixed(2)}`,px+(cosV>0?8:-60),cy+14,C.amber(),11);
+  txt('← cos →',cx+R/2*cosV,cy+18,C.amber(),10,'center');
+  txt('↕ sin',px+(cosV>0?8:-28),cy-(R/2)*sinV,C.teal(),10);
+  ln(cx,cy-R-4,cx,cy+R+4,C.faint(),1);
+  txt('sin = height of point above center',300,30,C.teal(),11);
+  txt('cos = how far right the point is from center',300,46,C.amber(),11);
+  txt('Both go from −1 to +1 as angle sweeps around',300,62,C.sec(),11);
+
+  const plotX=310,plotY=90,plotW=300,plotH=200;
+  ln(plotX,plotY+plotH/2,plotX+plotW,plotY+plotH/2,C.faint(),1);
+  ln(plotX,plotY,plotX,plotY+plotH,C.faint(),1);
+  for(let i=0;i<=N;i++){
+    const a=i*(2*PI/N);
+    const px2=plotX+i*(plotW/N);
+    const sy2=plotY+plotH/2-Math.sin(a)*(plotH/2-10);
+    const cy2=plotY+plotH/2-Math.cos(a)*(plotH/2-10);
+    if(i===0){ctx.beginPath();ctx.moveTo(px2,sy2);}else ctx.lineTo(px2,sy2);
+  }
+  ctx.strokeStyle=C.teal();ctx.lineWidth=2;ctx.setLineDash([]);ctx.stroke();
+  ctx.beginPath();
+  for(let i=0;i<=N;i++){
+    const a=i*(2*PI/N);
+    const px2=plotX+i*(plotW/N);
+    const cy2=plotY+plotH/2-Math.cos(a)*(plotH/2-10);
+    if(i===0)ctx.moveTo(px2,cy2);else ctx.lineTo(px2,cy2);
+  }
+  ctx.strokeStyle=C.amber();ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.stroke();
+
+  const hx=plotX+stepI*(plotW/N);
+  const hSin=plotY+plotH/2-Math.sin(angle)*(plotH/2-10);
+  const hCos=plotY+plotH/2-Math.cos(angle)*(plotH/2-10);
+  ln(hx,plotY,hx,plotY+plotH,C.purple(),1,[3,3]);
+  dot(hx,hSin,5,C.teal());
+  dot(hx,hCos,5,C.amber());
+  txt('+1',plotX-20,plotY+12,C.sec(),9);
+  txt('0',plotX-10,plotY+plotH/2+4,C.sec(),9);
+  txt('−1',plotX-20,plotY+plotH-4,C.sec(),9);
+  txt(`i=0`,plotX,plotY+plotH+14,C.sec(),9);
+  txt(`i=${N}`,plotX+plotW-14,plotY+plotH+14,C.sec(),9);
+
+  document.getElementById('stAngle').textContent=(angle*180/PI).toFixed(1)+'°';
+  document.getElementById('stSin').textContent=sinV.toFixed(3);
+  document.getElementById('stCos').textContent=cosV.toFixed(3);
+}
+
+function tab2(){
+  cl();
+  const PL=60,PR=W-40,PT=50,PB=H-50;
+  const PW=PR-PL,PH=PB-PT,mid=PT+PH/2;
+  ln(PL,mid,PR,mid,C.faint(),1);
+  ln(PL,PT,PL,PB,C.faint(),1);
+  txt('+1',PL-22,PT+10,C.sec(),10);
+  txt('0',PL-12,mid+4,C.sec(),10);
+  txt('−1',PL-22,PB-2,C.sec(),10);
+  txt('← step i=0 (start)',PL,PB+16,C.sec(),10);
+  txt(`step i=${N} (goal) →`,PR-90,PB+16,C.sec(),10);
+  txt('value',PL-34,PT-10,C.sec(),10);
+
+  const sinPts=[],cosPts=[];
+  for(let i=0;i<=N;i++){
+    const angle=i*(2*PI/N);
+    const x=PL+i*(PW/N);
+    sinPts.push([x, mid-Math.sin(angle)*(PH/2-12)]);
+    cosPts.push([x, mid-Math.cos(angle)*(PH/2-12)]);
+  }
+  ctx.beginPath();ctx.strokeStyle=C.teal();ctx.lineWidth=2.5;ctx.setLineDash([]);
+  sinPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+  ctx.beginPath();ctx.strokeStyle=C.amber();ctx.lineWidth=2;ctx.setLineDash([5,4]);
+  cosPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+
+  sinPts.forEach(([x,y])=>dot(x,y,3,C.teal()));
+  cosPts.forEach(([x,y])=>dot(x,y,3,C.amber()));
+
+  const hi=stepI;
+  const hx=PL+hi*(PW/N);
+  ln(hx,PT-6,hx,PB+6,C.purple(),1.5,[3,3]);
+  dot(sinPts[hi][0],sinPts[hi][1],6,C.teal(),null);
+  dot(cosPts[hi][0],cosPts[hi][1],6,C.amber(),null);
+
+  const angle=hi*(2*PI/N);
+  const sv=Math.sin(angle),cv2=Math.cos(angle);
+  const bx=hx>W-160?hx-170:hx+10;
+  ctx.fillStyle=dk()?'rgba(35,35,33,0.93)':'rgba(246,245,241,0.95)';
+  ctx.fillRect(bx,PT+10,160,52);
+  ctx.strokeStyle=C.gray();ctx.lineWidth=0.5;ctx.setLineDash([]);ctx.strokeRect(bx,PT+10,160,52);
+  txt(`i = ${hi}`,bx+8,PT+26,C.text(),11);
+  txt(`sin(${hi}×2π/${N}) = ${sv.toFixed(3)}`,bx+8,PT+40,C.teal(),11);
+  txt(`cos(${hi}×2π/${N}) = ${cv2.toFixed(3)}`,bx+8,PT+54,C.amber(),11);
+
+  for(let i=0;i<=N;i+=6){
+    const x=PL+i*(PW/N);
+    txt(`${i}`,x,PB+14,C.sec(),9,'center');
+    ln(x,mid-3,x,mid+3,C.gray(),1);
+  }
+
+  txt('sin(i × 2π/N)  — teal',PL+PW*0.55,PT+16,C.teal(),10);
+  txt('cos(i × 2π/N)  — amber dashed',PL+PW*0.55,PT+30,C.amber(),10);
+
+  document.getElementById('stAngle').textContent=(angle*180/PI).toFixed(1)+'°';
+  document.getElementById('stSin').textContent=sv.toFixed(3);
+  document.getElementById('stCos').textContent=cv2.toFixed(3);
+}
+
+function tab3(){
+  cl();
+  const PL=60,PR=W-30,PT=40,PB=H-50;
+  const PW=PR-PL,PH=PB-PT,mid=PT+PH/2;
+  ln(PL,mid,PR,mid,C.faint(),1);
+  ln(PL,PT,PL,PB,C.faint(),1);
+  txt('+1',PL-22,PT+10,C.sec(),10);
+  txt('0',PL-12,mid+4,C.sec(),10);
+  txt('−1',PL-22,PB-2,C.sec(),10);
+
+  const cols=[C.teal,C.amber,C.purple,C.coral];
+  const freqs=[1,2,3,4];
+  const dashes=[[],[5,4],[3,3],[2,4]];
+
+  freqs.forEach((f,fi)=>{
+    ctx.beginPath();
+    ctx.strokeStyle=cols[fi]();ctx.lineWidth=fi===freqs.indexOf(freqV)?2.5:1;
+    ctx.setLineDash(fi===freqs.indexOf(freqV)?[]:dashes[fi]);
+    for(let i=0;i<=N;i++){
+      const angle=i*(2*PI/N)*f;
+      const x=PL+i*(PW/N);
+      const y=mid-Math.sin(angle)*(PH/2-12);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    const labelY=PT+14+fi*16;
+    txt(`freq=${f}: sin(i × 2π/${N} × ${f})  ${f===freqV?'← selected':''}`,PL+8,labelY,cols[fi](),10);
+  });
+
+  for(let i=0;i<=N;i+=6){
+    const x=PL+i*(PW/N);
+    txt(`${i}`,x,PB+14,C.sec(),9,'center');
+    ln(x,mid-3,x,mid+3,C.gray(),1);
+  }
+  txt('← step i=0',PL,PB+30,C.sec(),10);
+  txt(`step i=${N} →`,PR-60,PB+30,C.sec(),10);
+  txt('Frequency = how many full wave cycles fit between i=0 and i=N',W/2,H-8,C.sec(),10,'center');
+}
+
+function tab4(){
+  cl();
+  const sx=70,sy=H*0.38,gx=W-70,gy=H*0.62;
+  const xi=(gx-sx)/N,yi=(gy-sy)/N;
+  const aInc=2*PI/N;
+
+  ln(sx,sy,gx,gy,C.gray(),1,[5,4]);
+  txt('straight line baseline',sx+(gx-sx)*0.3,sy-10,C.sec(),10);
+
+  const wpts=[];
+  for(let i=0;i<N;i++){
+    const ia=aInc*i*freqV;
+    const bx=sx+xi*i,by=sy+yi*i;
+    wpts.push([bx+4*xi*Math.sin(ia), by+4*yi*Math.cos(ia)]);
+  }
+  wpts.push([gx,gy]);
+
+  ctx.beginPath();ctx.strokeStyle=C.teal();ctx.lineWidth=2.5;ctx.setLineDash([]);
+  wpts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.stroke();
+  wpts.forEach(([x,y],i)=>{if(i<N)dot(x,y,3,C.purple());});
+
+  const hi=stepI;
+  const ia=aInc*hi*freqV;
+  const bx=sx+xi*hi,by=sy+yi*hi;
+  const xsin=4*xi*Math.sin(ia);
+  const ycos=4*yi*Math.cos(ia);
+  const fx=bx+xsin,fy=by+ycos;
+
+  dot(bx,by,5,C.gray());
+  ln(bx,by,fx,by,C.teal(),2);
+  ln(fx,by,fx,fy,C.amber(),2);
+  dot(fx,fy,7,C.coral());
+
+  const bxl=fx>W/2?fx-190:fx+10;
+  ctx.fillStyle=dk()?'rgba(35,35,33,0.93)':'rgba(246,245,241,0.95)';
+  ctx.fillRect(bxl,fy-70,184,80);
+  ctx.strokeStyle=C.gray();ctx.lineWidth=0.5;ctx.setLineDash([]);ctx.strokeRect(bxl,fy-70,184,80);
+  txt(`step i = ${hi}`,bxl+8,fy-54,C.text(),11);
+  txt(`i_angle = ${hi}×2π/${N}×${freqV.toFixed(1)}`,bxl+8,fy-40,C.sec(),10);
+  txt(`        = ${ia.toFixed(3)} rad`,bxl+8,fy-28,C.sec(),10);
+  txt(`x_sin = 4×xi×sin(${ia.toFixed(2)}) = ${xsin.toFixed(2)}`,bxl+8,fy-14,C.teal(),10);
+  txt(`y_cos = 4×yi×cos(${ia.toFixed(2)}) = ${ycos.toFixed(2)}`,bxl+8,fy,C.amber(),10);
+
+  dot(sx,sy,7,C.purple());txt('start',sx,sy-14,C.purple(),11,'center');
+  dot(gx,gy,7,C.coral());txt('goal',gx,gy+17,C.coral(),11,'center');
+
+  document.getElementById('stAngle').textContent=(ia*180/PI).toFixed(1)+'°';
+  document.getElementById('stSin').textContent=Math.sin(ia).toFixed(3);
+  document.getElementById('stCos').textContent=Math.cos(ia).toFixed(3);
+}
+
+const exps=[
+  `<strong>sin and cos come from a point walking around a circle.</strong><br>
+   Imagine a point sitting on the edge of a circle of radius 1. As it walks around, it has an angle — measured from the right side, going counter-clockwise. That angle is called <code>i_angle</code> in the code. Drag the step slider to walk the point around. The angle grows steadily as the step index <code>i</code> increases.`,
+
+  `<strong>sin is the height of that point. cos is how far right it is.</strong><br>
+   Look at the circle on the left. The <strong style="color:#1D9E75">teal vertical line</strong> is sin — it measures how far above or below the center the point is. The <strong style="color:#BA7517">amber horizontal line</strong> is cos — it measures how far left or right. Both values bounce between −1 and +1 as the point walks around. On the right, you can see those values plotted across all 24 steps. Drag the step slider to see where you are on both curves.`,
+
+  `<strong>Plot sin and cos across all N steps — you get a wave.</strong><br>
+   The code computes <code>i_angle = i × (2π / N)</code> for each step. When <code>i=0</code>, angle=0, sin=0, cos=1. When <code>i=6</code>, angle=90°, sin=1, cos=0. When <code>i=12</code>, angle=180°, sin=0, cos=−1. By step <code>i=N=24</code> it has swept a full circle. That smooth rise and fall IS the wave. Drag the slider to read off the exact value at each step.`,
+
+  `<strong>Frequency just speeds up how fast the angle grows.</strong><br>
+   Normally <code>i_angle = i × (2π/N)</code> — the angle sweeps one full circle from start to goal. With <code>frequency=2</code>, it becomes <code>i × (2π/N) × 2</code> — the angle sweeps TWO full circles in the same number of steps, so you get 2 wave cycles instead of 1. Frequency 3 gives 3 cycles, and so on. That is literally the only thing frequency does — it multiplies the angle so the wave repeats more times.`,
+
+  `<strong>Now the robot code makes sense.</strong><br>
+   At each step <code>i</code>, the code computes <code>i_angle = i × (2π/N) × frequency</code>. Then <code>sin(i_angle)</code> gives a number between −1 and +1. Multiply that by <code>A × x_increment</code> and you get a horizontal nudge. <code>cos(i_angle)</code> gives the vertical nudge. Because sin and cos oscillate smoothly, the nudges alternate direction step by step — and that is what creates the wave. Drag the step slider to see the exact calculation for each point.`
+];
+
+const showStats=[true,true,true,false,true];
+const showSlider=[true,true,true,false,true];
+const showFreq=[false,false,false,true,true];
+
+function go(i){
+  tabIdx=i;
+  document.querySelectorAll('.tab').forEach((b,j)=>b.classList.toggle('on',j===i));
+  document.getElementById('exp').innerHTML=exps[i];
+  document.getElementById('statsArea').style.display=showStats[i]?'':'none';
+  document.getElementById('sliderArea').style.display=showSlider[i]?'':'none';
+  document.getElementById('freqRow').style.display=showFreq[i]?'flex':'none';
+  [tab0,tab1,tab2,tab3,tab4][i]();
+}
+
+document.getElementById('rI').addEventListener('input',e=>{
+  stepI=+e.target.value;document.getElementById('vI').textContent=stepI;
+  [tab0,tab1,tab2,tab3,tab4][tabIdx]();
+});
+document.getElementById('rFreq').addEventListener('input',e=>{
+  freqV=+e.target.value;document.getElementById('vFreq').textContent=freqV.toFixed(1);
+  [tab0,tab1,tab2,tab3,tab4][tabIdx]();
+});
+
+go(0);
+</script>
