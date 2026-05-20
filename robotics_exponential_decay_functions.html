@@ -1,0 +1,167 @@
+
+<h2 class="sr-only">Interactive chart showing three exponential functions used in robotics: damping decay, Gaussian sensor noise, and velocity ramp-up. Use the sliders to adjust parameters and see how each function changes.</h2>
+
+<div style="padding: 1rem 0;">
+
+<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 1.5rem;">
+  <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 0.75rem 1rem; flex: 1; min-width: 140px;">
+    <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px;">Function 1</div>
+    <div style="font-size: 15px; font-weight: 500; color: var(--color-text-primary); font-family: var(--font-mono);">e<sup>−λx</sup></div>
+    <div style="font-size: 12px; color: var(--color-text-secondary); margin-top: 2px;">Damping / PID decay</div>
+  </div>
+  <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 0.75rem 1rem; flex: 1; min-width: 140px;">
+    <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px;">Function 2</div>
+    <div style="font-size: 15px; font-weight: 500; color: var(--color-text-primary); font-family: var(--font-mono);">e<sup>−x²/2σ²</sup></div>
+    <div style="font-size: 12px; color: var(--color-text-secondary); margin-top: 2px;">Gaussian / sensor noise</div>
+  </div>
+  <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 0.75rem 1rem; flex: 1; min-width: 140px;">
+    <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px;">Function 3</div>
+    <div style="font-size: 15px; font-weight: 500; color: var(--color-text-primary); font-family: var(--font-mono);">1 − e<sup>−λx</sup></div>
+    <div style="font-size: 12px; color: var(--color-text-secondary); margin-top: 2px;">Velocity ramp-up</div>
+  </div>
+</div>
+
+<div style="display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: flex-end;">
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <label style="font-size: 13px; color: var(--color-text-secondary); white-space: nowrap;">Decay rate λ</label>
+    <input type="range" min="1" max="10" step="1" value="3" id="lambda" style="width: 100px;" />
+    <span style="font-size: 13px; font-weight: 500; min-width: 18px;" id="lambda-out">3</span>
+  </div>
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <label style="font-size: 13px; color: var(--color-text-secondary); white-space: nowrap;">Gaussian σ</label>
+    <input type="range" min="1" max="10" step="1" value="4" id="sigma" style="width: 100px;" />
+    <span style="font-size: 13px; font-weight: 500; min-width: 18px;" id="sigma-out">4</span>
+  </div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1rem; font-size: 12px; color: var(--color-text-secondary);">
+  <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 18px; height: 3px; background: #378ADD; display:inline-block; border-radius:2px;"></span>e<sup>−λx</sup> (damping)</span>
+  <span style="display: flex; align-items: center; gap: 4px; margin-left: 8px;"><span style="width: 18px; height: 3px; background: #D4537E; display:inline-block; border-radius:2px;"></span>e<sup>−x²/2σ²</sup> (Gaussian)</span>
+  <span style="display: flex; align-items: center; gap: 4px; margin-left: 8px;"><span style="width: 18px; height: 3px; background: #1D9E75; display:inline-block; border-radius:2px;"></span>1−e<sup>−λx</sup> (ramp-up)</span>
+</div>
+
+<div style="position: relative; width: 100%; height: 280px;">
+  <canvas id="mainChart" role="img" aria-label="Line chart showing three exponential functions used in robotics across x values 0 to 10. Blue line shows exponential decay, pink shows Gaussian bell curve, green shows ramp-up curve.">Three curves: exponential decay (starts at 1, falls toward 0), Gaussian bell (peaks at center, tapers off), and ramp-up (starts at 0, rises toward 1).</canvas>
+</div>
+
+<div style="margin-top: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+
+  <div style="border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem; border-left: 3px solid #378ADD;">
+    <div style="font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--color-text-primary);">e<sup>−λx</sup> in robotics</div>
+    <ul style="font-size: 12px; color: var(--color-text-secondary); padding-left: 1rem; margin: 0; line-height: 1.8;">
+      <li>PID error shrinks over time</li>
+      <li>Motor back-EMF decay</li>
+      <li>Vibration damping in arms</li>
+      <li>Exponential smoothing filters</li>
+    </ul>
+  </div>
+
+  <div style="border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem; border-left: 3px solid #D4537E;">
+    <div style="font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--color-text-primary);">Gaussian in robotics</div>
+    <ul style="font-size: 12px; color: var(--color-text-secondary); padding-left: 1rem; margin: 0; line-height: 1.8;">
+      <li>LiDAR / camera noise models</li>
+      <li>Kalman filter covariance</li>
+      <li>Probability density in SLAM</li>
+      <li>Trajectory smoothing kernels</li>
+    </ul>
+  </div>
+
+  <div style="border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem; border-left: 3px solid #1D9E75;">
+    <div style="font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--color-text-primary);">1−e<sup>−λx</sup> in robotics</div>
+    <ul style="font-size: 12px; color: var(--color-text-secondary); padding-left: 1rem; margin: 0; line-height: 1.8;">
+      <li>Motor velocity ramp-up</li>
+      <li>Capacitor charging curves</li>
+      <li>First-order step responses</li>
+      <li>Smooth joint acceleration</li>
+    </ul>
+  </div>
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const N = 200;
+const xMax = 10;
+const xs = Array.from({length: N}, (_, i) => parseFloat((i * xMax / (N-1)).toFixed(2)));
+
+function buildDatasets(lambda, sigma) {
+  return [
+    {
+      label: 'e^(-λx)',
+      data: xs.map(x => Math.exp(-lambda * x)),
+      borderColor: '#378ADD',
+      backgroundColor: 'rgba(55,138,221,0.08)',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      tension: 0.3,
+      fill: false,
+      borderDash: []
+    },
+    {
+      label: 'Gaussian',
+      data: xs.map(x => {
+        const cx = xMax / 2;
+        return Math.exp(-Math.pow(x - cx, 2) / (2 * sigma * sigma));
+      }),
+      borderColor: '#D4537E',
+      backgroundColor: 'rgba(212,83,126,0.08)',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      tension: 0.3,
+      fill: false,
+      borderDash: [6, 3]
+    },
+    {
+      label: '1-e^(-λx)',
+      data: xs.map(x => 1 - Math.exp(-lambda * x)),
+      borderColor: '#1D9E75',
+      backgroundColor: 'rgba(29,158,117,0.08)',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      tension: 0.3,
+      fill: false,
+      borderDash: [2, 2]
+    }
+  ];
+}
+
+const chart = new Chart(document.getElementById('mainChart'), {
+  type: 'line',
+  data: {
+    labels: xs.map(x => x.toFixed(1)),
+    datasets: buildDatasets(3, 4)
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 200 },
+    plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+    scales: {
+      x: {
+        ticks: { maxTicksLimit: 11, autoSkip: true, color: '#888780' },
+        grid: { color: 'rgba(136,135,128,0.15)' },
+        title: { display: true, text: 'x (time / distance / input)', color: '#888780', font: { size: 12 } }
+      },
+      y: {
+        min: 0, max: 1.05,
+        ticks: { color: '#888780', stepSize: 0.2 },
+        grid: { color: 'rgba(136,135,128,0.15)' },
+        title: { display: true, text: 'output value', color: '#888780', font: { size: 12 } }
+      }
+    }
+  }
+});
+
+function update() {
+  const lambda = parseInt(document.getElementById('lambda').value);
+  const sigma = parseInt(document.getElementById('sigma').value);
+  document.getElementById('lambda-out').textContent = lambda;
+  document.getElementById('sigma-out').textContent = sigma;
+  chart.data.datasets = buildDatasets(lambda, sigma);
+  chart.update();
+}
+
+document.getElementById('lambda').addEventListener('input', update);
+document.getElementById('sigma').addEventListener('input', update);
+</script>
